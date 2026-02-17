@@ -15,28 +15,49 @@ class ExpoDynamicAppIconModule : Module() {
     Name("ExpoDynamicAppIcon")
 
     Function("setAppIcon") { name: String ->
-      try {
-        var newIcon:String = context.packageName + ".MainActivity" + name
-        var currentIcon:String = if(!SharedObject.icon.isEmpty()) SharedObject.icon else context.packageName + ".MainActivity"
+        try {
+            val packageName = context.packageName
+            
+            val suffixes = listOf(
+                "two_dark", "two_light", "six_dark", "six_light", 
+                "seven_dark", "seven_light", "eight_dark", "eight_light", 
+                "ten_dark", "ten_light", "fifteen_dark", "fifteen_light", 
+                "seventeen_dark", "seventeen_light", "nineteen_dark", "nineteen_light", 
+                "twenty_dark", "twenty_light"
+            )
 
-        SharedObject.packageName = context.packageName
-        SharedObject.pm = pm
+            val targetClassName = if (name.isEmpty()) "$packageName.MainActivity" else "$packageName.MainActivity$name"
 
-        pm.setComponentEnabledSetting(
-          ComponentName(context.packageName, newIcon),
-          PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-          PackageManager.DONT_KILL_APP
-        )
+            val mainActivityName = "$packageName.MainActivity"
+            pm.setComponentEnabledSetting(
+                ComponentName(packageName, mainActivityName),
+                if (targetClassName == mainActivityName) PackageManager.COMPONENT_ENABLED_STATE_ENABLED 
+                else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP
+            )
 
-        SharedObject.classesToKill.add(currentIcon)
-        SharedObject.icon = newIcon
+            for (suffix in suffixes) {
+                val aliasName = "$packageName.MainActivity$suffix"
+                
+                val newState = if (targetClassName == aliasName) {
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                } else {
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                }
+                
+                pm.setComponentEnabledSetting(
+                    ComponentName(packageName, aliasName),
+                    newState,
+                    PackageManager.DONT_KILL_APP
+                )
+            }
 
-        return@Function name
-      } catch (e: Exception) {
-        return@Function false
-      }
+            SharedObject.icon = targetClassName
+            return@Function name
 
-      return@Function false
+        } catch (e: Exception) {
+            return@Function false
+        }
     }
 
     Function("getAppIcon") {
